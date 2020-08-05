@@ -1,0 +1,59 @@
+version: "3.7"
+services: 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app_laravel
+    working_dir: /var/www
+    ports: 
+      - "3000:3000"
+    environment:
+      - "DB_PASSWORD=123"
+      - "DB_HOST=db" 
+      - "CHOKIDAR_USEPOLLING=true"
+    volumes:
+      - ./web/:/var/www/
+      - ./php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - laravel-network
+
+  web: 
+    image: nginx
+    container_name: server_laravel
+    ports: 
+      - "80:80"
+    volumes:
+      - ./web/:/var/www/
+      - ./nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - laravel-network
+
+  db:
+    image: mysql
+    container_name: db_laravel 
+    environment:
+      MYSQL_DATABASE: developer
+      MYSQL_ROOT_PASSWORD: 123
+    ports: 
+      - "3306:3306"
+    networks:
+      - laravel-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin_laravel 
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_PASSWORD: 123
+    ports:
+      - "8080:80"
+    networks:
+      - laravel-network
+
+# Docker Networks
+networks: 
+  laravel-network:
+    driver: bridge
+
