@@ -1,59 +1,104 @@
 version: "3.7"
-services: 
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: app_laravel
-    working_dir: /var/www
-    ports: 
-      - "3000:3000"
+services:
+  web:
+    image: nginx:alpine
+    container_name: server_laravel
     environment:
       - "DB_PASSWORD=123"
-      - "DB_HOST=db" 
-      - "CHOKIDAR_USEPOLLING=true"
+      - "DB_HOST=db"
+    command: [nginx-debug, '-g', 'daemon off;']
+    ports:
+      - "80:80"
     volumes:
-      - ./web/:/var/www/
-      - ./php/local.ini:/usr/local/etc/php/conf.d/local.ini
+      - ./web/:/var/www/html
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - php 
+      - db 
     networks:
       - laravel-network
 
-  web: 
-    image: nginx
-    container_name: server_laravel
-    ports: 
-      - "80:80"
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: php
     volumes:
-      - ./web/:/var/www/
-      - ./nginx/conf.d/:/etc/nginx/conf.d/
+      - ./web/:/var/www/html
+      - ./php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    ports:
+      - "9000:9000"
     networks:
       - laravel-network
 
   db:
     image: mysql
-    container_name: db_laravel 
+    container_name: db
     environment:
       MYSQL_DATABASE: developer
       MYSQL_ROOT_PASSWORD: 123
-    ports: 
+    volumes:
+      - ./mysql:/var/lib/mysql
+    ports:
       - "3306:3306"
     networks:
       - laravel-network
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
-    container_name: phpmyadmin_laravel 
+    container_name: phpmyadmin
     environment:
       PMA_HOST: db
       PMA_PORT: 3306
       PMA_PASSWORD: 123
+    depends_on:
+      - db
     ports:
       - "8080:80"
     networks:
       - laravel-network
 
+  composer:
+    image: composer
+    container_name: composer
+    volumes:
+      - ./web:/var/www/html
+    working_dir: /var/www/html
+    depends_on:
+      - php 
+    networks:
+      - laravel-network
+  
+  artisan:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: artisan
+    volumes:
+      - ./web:/var/www/html
+    depends_on:
+      - db 
+    working_dir: /var/www/html
+    entrypoint: ['php', '/var/www/html/artisan']
+    ports:
+      - "8000:8000"
+    networks:
+      - laravel-network
+
+  npm:
+    image: node:13.7
+    container_name: npm
+    volumes:
+      - ./web:/var/www/html
+    working_dir: /var/www/html
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    entrypoint: ["npm"]
+    networks:
+      - laravel-network
+
 # Docker Networks
-networks: 
+networks:
   laravel-network:
     driver: bridge
-
