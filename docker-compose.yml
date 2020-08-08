@@ -3,9 +3,6 @@ services:
   web:
     image: nginx:alpine
     container_name: server_laravel
-    environment:
-      - "DB_PASSWORD=123"
-      - "DB_HOST=db"
     command: [nginx-debug, '-g', 'daemon off;']
     ports:
       - "80:80"
